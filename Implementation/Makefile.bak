@@ -1,0 +1,82 @@
+SHELL     = /bin/bash
+MAKE      = make
+CC        = gcc
+CFLAGS    = -W -Wall -ansi -pedantic
+LIBS_DRAW = -L/usr/X11R6/lib -lX11 -lXext
+OBJS_PACK = main.o lecture_probleme.o recherche_remplissage.o remplir_bande.o utiles.o
+OBJS_DRAW = dessiner_solution.o ez-draw.o
+PACK      = remplir_conteneur
+GEN       = generateur
+DRAW      = dessiner_solution
+RM        = rm -f
+
+# Uncomment for debugging option :
+DEBUG = 1
+ifdef DEBUG
+	CFLAGS += -ggdb
+endif
+
+# Uncomment for optimization option :
+#OPTIMIZ = 1
+ifdef OPTIMIZ
+	CFLAGS += -O2
+endif
+
+.PHONY : help all clean depend
+
+help :
+	@echo "Options du makefile : help all clean depend"
+
+all : $(PACK) $(GEN) $(DRAW)
+
+.c.o :
+	$(CC) $*.c -c $(CFLAGS)
+
+clean :
+	$(RM) *.o $(PACK) $(GEN) $(DRAW)
+
+depend :
+	makedepend generateur.c lecture_probleme.c recherche_remplissage.c;
+	makedepend remplir_bande.c utiles.c main.c ez-draw.c dessiner_solution.c
+
+#----------------------- G E N E R A T E U R ------------------------#
+
+$(GEN) : generateur.o
+	$(CC) $^ -o $@ $(CFLAGS)
+
+
+#------------------------- S O L V E U R ----------------------------#
+
+$(PACK) : $(OBJS_PACK)
+	$(CC) $^ -o $@ $(CFLAGS)
+
+
+#----------------------- D E S S I N A T E U R ----------------------#
+
+$(OBJS_DRAW) :
+	$(CC) $*.c -c $(CFLAGS)
+
+$(DRAW) : $(OBJS_DRAW)
+	$(CC) $^ -o $@ $(LIBS_DRAW)
+
+
+
+# DO NOT DELETE
+
+generateur.o: /usr/include/stdio.h /usr/include/features.h
+generateur.o: /usr/include/libio.h /usr/include/_G_config.h
+generateur.o: /usr/include/wchar.h /usr/include/stdlib.h
+generateur.o: /usr/include/alloca.h /usr/include/time.h
+generateur.o: /usr/include/xlocale.h
+lecture_probleme.o: /usr/include/stdio.h /usr/include/features.h
+lecture_probleme.o: /usr/include/libio.h /usr/include/_G_config.h
+lecture_probleme.o: /usr/include/wchar.h /usr/include/stdlib.h
+lecture_probleme.o: /usr/include/alloca.h /usr/include/assert.h
+lecture_probleme.o: lecture_probleme.h
+recherche_remplissage.o: /usr/include/stdio.h /usr/include/features.h
+recherche_remplissage.o: /usr/include/libio.h /usr/include/_G_config.h
+recherche_remplissage.o: /usr/include/wchar.h /usr/include/stdlib.h
+recherche_remplissage.o: /usr/include/alloca.h /usr/include/assert.h
+recherche_remplissage.o: /usr/include/string.h /usr/include/xlocale.h
+recherche_remplissage.o: lecture_probleme.h recherche_remplissage.h
+recherche_remplissage.o: remplir_bande.h utiles.h

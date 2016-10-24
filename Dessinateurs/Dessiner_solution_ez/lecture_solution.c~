@@ -1,0 +1,72 @@
+/* INF24 PROJET PACKING
+ * 
+ * Lecture via un tube des données affichées par le generateur.
+ * 
+ * Utilisation en ligne de commande (si main dans ce fichier) : 
+ *       ./generateur <nombre objets> ... <hauteur maximale objet> | ./lecture
+ *    OU
+ *       cat données.txt | ./lecture   OU  ./lecture < données.tx
+ *			avec données.txt le fichier résultat de l'exécution du génerateur.		
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include "lecture_solution.h"
+
+int nb_obj, largeur_conteneur, hauteur_conteneur;		/* Constantes du projet. */
+OBJET **Obj_Genere;
+
+
+void Read ()
+{
+	int i;
+	printf("----L%d In Read++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n", __LINE__);
+	/* Lit les données du problème (affichées par le generateur), en vérifiant que la lecture n'échoue pas. */
+	if(scanf("%d %d", &largeur_conteneur, &hauteur_conteneur) != 2) {
+		fprintf(stderr, "Read : erreur lors de la lecture des objets genérés. Abandon\n");		/* mettre argv[0] partout où il faut. */
+		exit(EXIT_FAILURE);
+	}
+	
+	if(scanf("%d", &nb_obj) != 1) {						/* Lit le nombre d'objets génerés. */	
+		fprintf(stderr, "Read : erreur lors de la lecture des objets genérés. Abandon\n");
+		exit(EXIT_FAILURE);
+	}
+	printf("\tDans Read : nb_obj = %d objets génerés par le generateur stockés par Read\n", nb_obj);
+	/* Allocation de Obj_Genere, qui est un tableau de structures OBJET, et qui contiendra tous les objets génerés */
+	Obj_Genere = AllouerOBJETS();
+	
+	/* Lit les noms et tailles des objets, et les stocke dans les champs correspondant de Obj_Genere. */
+	for(i = 0; i < nb_obj; i++) {
+		if(scanf("%s %d %d", Obj_Genere[i]->nom, &Obj_Genere[i]->l, &Obj_Genere[i]->h) != 3) {
+			fprintf(stderr, "Read : erreur lors de la lecture des objets genérés. Abandon\n");
+			exit(EXIT_FAILURE);
+		}
+		Obj_Genere[i]->in_conteneur = 0;
+	}
+		
+	/* Vérification (hors sujet) des données stockées : */
+	printf("Largeur du conteneur: %d, Hauteur du conteneur : %d\nNombre d'objets à placer: %d\nListe des objets génerés :\n", largeur_conteneur, hauteur_conteneur, nb_obj);
+	for(i = 0; i < nb_obj; i++)
+		printf("  %s %d %d\n", Obj_Genere[i]->nom, Obj_Genere[i]->l, Obj_Genere[i]->h);
+		
+	printf("\tRead exécutée sans problèmes\n");
+}
+
+OBJET** AllouerOBJETS () {		/* Amélioration : prendre en paramètre le nombre de case à allouer */
+	OBJET **Bison = NULL;
+	int i;
+	
+	/* Allocation dynamique de Bison (liste vers nb_obj structures OBJET). */
+	Bison = malloc(nb_obj * sizeof(OBJET*));		/* Bison := tableau de pointeurs vers des structures OBJET */
+	assert(Bison != NULL);
+	for(i = 0; i < nb_obj; i++)						/* Initialise à NULL */
+		Bison[i] = NULL;
+		
+	for(i = 0; i < nb_obj; i++) {	
+		Bison[i] = malloc(sizeof(OBJET));	/* Allocation dynamique de chaque case Bison[i] (avec 1 ≤ i ≤ nb_obj, où Bison[i] est un pointeur vers une struct OBJET) */
+		assert(Bison[i] != NULL);
+	}
+	
+	return Bison;
+}

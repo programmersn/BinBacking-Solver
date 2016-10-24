@@ -1,0 +1,6 @@
+SOUIKI Nouaïm
+
+Compile with `make clean all'
+
+Run with 
+`./remplir_conteneur [tri] [-pivot] [-sac] [-occs [k]] [-coupes] [-imbrique] < standard_input'

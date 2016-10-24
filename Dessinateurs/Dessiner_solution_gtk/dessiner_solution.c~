@@ -1,0 +1,415 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <gtk/gtk.h>
+#include "dessiner_solution.h"
+
+int nb_obj, hauteur_conteneur, largeur_conteneur;
+double surface_max;
+
+ENSEMBLE_SOLUTIONS Obj_Solution = NULL;
+
+
+/** ---------------------- M A I N   P R O G R A M ---------------------------*/
+
+int main (int argc, char *argv[]) 
+{
+	Info info;
+	Gui  gui;
+	
+	LireSolutions ();
+	
+	gtk_init (& argc, & argv);
+	info_init_default (& info);
+	gui_init (& gui, & info);
+	gtk_widget_show_all (gui.window);
+	gtk_main();
+	
+	printf("Salam...\n");
+	
+	return EXIT_SUCCESS;
+}
+
+
+/** ------------------- I N I T I A L I S A T I O N S -----------------------*/
+
+void info_init_default (Info *info) 
+{
+	info->show_txt_on_objs = FALSE;
+	info->zoom = 7;
+	info->container_line_width = 3; info->objs_line_width = 1;
+	info->x_container = 320; info->y_container = 70; 
+}
+
+void gui_init (Gui *g, Info *info)
+{
+	g->info = info;
+	
+	gui_init_window (g);
+	gui_init_layout (g);
+	gui_init_area   (g);
+	gui_init_quit_button (g);
+	gui_init_show_txt_on_objs_check (g);
+}
+
+void gui_init_window (Gui *g)
+{
+	g->window = gtk_window_new  (GTK_WINDOW_TOPLEVEL);
+	gtk_window_set_default_size (GTK_WINDOW (g->window), 1100, 700);
+	gtk_window_set_title        (GTK_WINDOW (g->window), 
+															 "Packing  :  dessin du remplissage");
+	
+	g_signal_connect (g->window, "delete-event", G_CALLBACK (on_delete_event),
+										g);
+	
+	g_signal_connect (g->window, "destroy", G_CALLBACK (on_destroy), g);
+}
+
+void gui_init_layout (Gui *g)
+{	
+	g->main_box = gtk_vbox_new (!HOMOGENEOUS, 5);
+	gtk_container_add (GTK_CONTAINER (g->window), g->main_box);
+	
+	g->top_box = gtk_hbox_new (!HOMOGENEOUS, 5);
+	gtk_box_pack_start (GTK_BOX (g->main_box), g->top_box, !EXPAND, !FILL, 5);
+}
+
+void gui_init_area (Gui *g)
+{	
+	g->area = gtk_drawing_area_new ();
+	gtk_box_pack_start (GTK_BOX (g->main_box), g->area, EXPAND, FILL, 5);
+	g_signal_connect (g->area, "expose-event", G_CALLBACK (on_area_expose), g);
+}
+
+void gui_init_quit_button (Gui *g)
+{
+	g->quit_button = gtk_button_new_with_label ("Quitter");
+	gtk_box_pack_start (GTK_BOX (g->top_box), g->quit_button, !EXPAND, FILL, 5);
+	g_signal_connect (g->quit_button, "clicked", 
+									  G_CALLBACK (on_quit_button_clicked), g);
+}
+
+void gui_init_zoom_spin (Gui *g)
+{
+	
+}
+
+void gui_init_show_txt_on_objs_check (Gui *g)
+{
+
+}
+
+
+/** --------------------- H A N D L E R S -----------------------------------*/
+
+gboolean on_delete_event (GtkWidget U *widget, GdkEvent U *e, gpointer U data)
+{
+	gboolean prevent_from_destroying = FALSE;
+	printf("on_delete_event\n");
+	
+	return prevent_from_destroying;
+}
+
+void on_destroy (GtkWidget U *widget, gpointer U data)
+{
+	printf("on_destroy\n");
+	gtk_main_quit ();
+}
+
+void on_quit_button_clicked (GtkButton *button, gpointer data)
+{
+	printf("on_quit_button_clicked\n");
+	gtk_main_quit ();
+}
+
+gboolean on_area_expose (GtkWidget *widget, GdkEventExpose *e, gpointer data)
+{
+	Gui *g = data;
+	GdkGC *gc = gdk_gc_new (widget->window);
+
+	draw_area (widget, gc);
+	
+	draw_packing (g->info, GDK_DRAWABLE (widget->window), gc);
+	
+	g_object_unref (gc);
+	
+	return TRUE;
+}
+
+
+/** ------------------ D E S S I N    R E M P L I S S A G E -----------------*/
+
+void draw_area (GtkWidget *widget, GdkGC *gc)
+{
+	guint w = widget->allocation.width, h = widget->allocation.height;
+		
+	gc_set_rgb_fg (gc, 0xFFFFFF);
+	gdk_draw_rectangle (widget->window, gc, TRUE, 0, 0, w, h);
+}
+
+void draw_packing (Info *info, GdkDrawable *drawable, GdkGC *gc)
+{
+	draw_container (info, drawable, gc);
+	draw_objects   (info, drawable, gc);
+}
+
+void draw_container (Info *info, GdkDrawable *drawable, GdkGC *gc)
+{
+	guint z = info->zoom, x_c = info->x_container-2, y_c = info->y_container-2;
+	
+	set_color (gc, 0, 50, 20);
+	gdk_gc_set_line_attributes (gc, info->container_line_width, GDK_LINE_SOLID,
+															GDK_CAP_NOT_LAST, GDK_JOIN_MITER);
+	
+	gdk_draw_rectangle (drawable, gc, FALSE, x_c, y_c, 
+											z*largeur_conteneur+4, z*hauteur_conteneur+4);
+}
+
+void draw_objects (Info *info, GdkDrawable *drawable, GdkGC *gc)
+{
+	int i;
+	guint z = info->zoom, x_c = info->x_container, y_c = info->y_container;
+	guint H = hauteur_conteneur;
+	
+	for (i = 0; i < nb_obj; i++) {
+		set_color (gc, 0, 112, 49);
+		gdk_draw_rectangle (drawable, gc, TRUE, x_c + z*Obj_Solution[i]->x,
+																						y_c + z*Obj_Solution[i]->y,
+																						z*Obj_Solution[i]->l,
+																						z*Obj_Solution[i]->h);
+		set_color (gc, 255, 255, 255);
+		gdk_gc_set_line_attributes (gc, info->objs_line_width, GDK_LINE_SOLID,
+																GDK_CAP_NOT_LAST, GDK_JOIN_MITER);
+		gdk_draw_rectangle (drawable, gc, FALSE, x_c + z*Obj_Solution[i]->x,
+																					   y_c + z*Obj_Solution[i]->y,
+																						 z*Obj_Solution[i]->l,
+																						 z*Obj_Solution[i]->h);
+	}
+}
+
+
+/** --------------- L E C T U R E   D E S   S O L U T I O N S ----------------*/
+
+void LireSolutions ()
+{
+	int i;
+
+	if(scanf("%d %d", &largeur_conteneur, &hauteur_conteneur) != 2) {
+		fprintf(stderr, "LireSolutions : erreur lors de la lecture des "
+							      "objets mis dans le conteneur. Abandon\n");
+		exit(EXIT_FAILURE);
+	}
+	
+	if(scanf("%d", &nb_obj) != 1) {			
+		fprintf(stderr, "LireSolutions : erreur lors de la lecture des "
+							 "objets mis dans le conteneur. Abandon\n");
+		exit(EXIT_FAILURE);
+	}
+
+	Obj_Solution = AllouerEnsembleSolutions();
+	
+	for(i = 0; i < nb_obj; i++) {
+		if(scanf("%s %d %d %d %d", Obj_Solution[i]->nom, 
+															 &Obj_Solution[i]->l, 
+															 &Obj_Solution[i]->h,
+		                           &Obj_Solution[i]->x, 
+		                           &Obj_Solution[i]->y) != 5) {
+			fprintf (stderr, "LireSolutions : "
+											 "erreur lors de la lecture des objets mis dans"
+											 " le conteneur. Abandon\n");
+			exit (EXIT_FAILURE);
+		}
+	}
+
+	if(scanf("%lf", &surface_max) != 1) {
+		fprintf(stderr, "LireSolutions : erreur lors de la lecture des "
+							 "objets mis dans le conteneur. Abandon\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
+ENSEMBLE_SOLUTIONS AllouerEnsembleSolutions () {
+	ENSEMBLE_SOLUTIONS Bison = NULL;
+	int i;
+	
+	Bison = malloc(nb_obj * sizeof(*Bison));
+	assert(Bison != NULL);
+	for(i = 0; i < nb_obj; i++)
+		Bison[i] = NULL;
+		
+	for(i = 0; i < nb_obj; i++) {	
+		Bison[i] = malloc(sizeof(*Bison[i]));
+		assert(Bison[i] != NULL);
+	}
+	
+	return Bison;
+}
+
+
+/** ------------------------------ C O L O R S -------------------------------*/
+
+void set_color (GdkGC *gc, gint r, gint g, gint b)
+{
+	GdkColor c;
+	
+	c.pixel = 0; 
+	c.red   = r << 8; 
+	c.green = g << 8;
+	c.blue  = b << 8;
+	gdk_gc_set_rgb_fg_color (gc, &c);
+}
+
+void color_set_rgb (GdkColor *c, guint rgb)
+{
+	c->red   = (rgb & 0xFF0000) >> 8;
+	c->green = (rgb & 0x00FF00) 		;
+	c->blue  = (rgb & 0x0000FF) << 8;
+}
+
+GdkColor *static_color_from_rgb (guint rgb)
+{
+	static GdkColor color;
+	color_set_rgb ( & color, rgb);
+	
+	return &color;
+}
+
+void gc_set_rgb_fg (GdkGC *gc, guint rgb)
+{
+	gdk_gc_set_rgb_fg_color (gc, static_color_from_rgb (rgb));
+}
+
+
+/**-------------------------------- F O N T ----------------------------------*/
+
+/* font.c - originate from EZ-Draw-GTK
+ *
+ * Edouard.Thiel@lif.univ-mrs.fr - 08/02/2011
+ *
+ * This program is free software under the terms of the
+ * GNU Lesser General Public License (LGPL) version 2.1.
+*/
+
+/* Rend vsnprintf compatible avec -ansi */
+#if defined __STRICT_ANSI__ && !defined _GNU_SOURCE
+#define _GNU_SOURCE
+#include <stdio.h>
+#undef _GNU_SOURCE
+#else
+#include <stdio.h>
+#endif
+#include <string.h>
+#include <stdarg.h>
+
+
+
+/* Changer la taille de la fonte actuelle ; taille en pixels.
+*/
+
+void font_set_size (PangoLayout *layout, int size) 
+{
+	const PangoFontDescription *d1 = pango_layout_get_font_description (layout);
+	PangoFontDescription *d2 = pango_font_description_copy (d1);
+	pango_font_description_set_absolute_size (d2, size * PANGO_SCALE);
+	pango_layout_set_font_description (layout, d2);
+	pango_font_description_free (d2);
+}
+
+
+/* Chargement d'une fonte.
+ * Usage : font_set_name (layout, "Times, bold italic 20");
+*/
+
+void font_set_name (PangoLayout *layout, char const *desc)
+{
+    PangoFontDescription *d;
+    d = pango_font_description_from_string (desc);
+    pango_layout_set_font_description (layout, d);
+    pango_font_description_free (d);
+}
+
+
+/*
+ * Ecrit du texte, s'utilise comme printf.
+ *
+ * L'affichage de texte necessite un PangoLayout.
+ * Si on fait peu d'affichages dans la meme callback, on peut demander
+ * a la fonction de creer un layout temporaire en lui passant NULL :
+ *
+ *     font_draw_text (widget, gc, NULL, FONT_TL, 10, 10, "Bonjour");
+ *
+ * Si on fait beaucoup d'affichage de texte, il vaut mieux creer un
+ * layout avant et le detruire apres :
+ *
+ *	 	 PangoLayout *layout = gtk_widget_create_pango_layout (widget, NULL);
+ *     font_draw_text (widget, gc, layout, FONT_TL, 10, 10, "Bonjour");
+ *     font_draw_text (widget, gc, layout, FONT_TL, 10, 30, "Hello");
+ *     g_object_unref (G_OBJECT (layout));
+*/
+
+void 
+font_draw_text (GtkWidget *widget, GdkGC *gc, PangoLayout *layout,
+					 Font_align align, int x, int y, const char *format, ...)
+{
+    int valign, halign, layout_priv = 0;
+    va_list ap;
+    char buf[16384];
+    PangoRectangle extents;
+
+    if (align <= FONT_AA || align >= FONT_BB)
+      { fprintf (stderr, "font_draw_text: bad align\n"); return; }
+
+    /* Decode align */
+    align -= FONT_AA + 1;
+    halign = align % 3;
+    valign = align / 3;
+
+    /* Ecrit la chaine formatée dans buf */
+    va_start (ap, format);
+    vsnprintf (buf, sizeof(buf)-1, format, ap);
+    va_end (ap);
+    buf[sizeof(buf)-1] = 0;
+    if (buf[0] == 0) return;
+
+    if (layout == NULL) {
+        /* On cree un layout privé pour dessiner du texte */
+        layout = gtk_widget_create_pango_layout (widget, NULL);
+        layout_priv = 1;
+    }
+
+    /* On donne la chaine a afficher */
+    pango_layout_set_text (layout, buf, strlen(buf));
+
+    /* On recupere les dimensions */
+    pango_layout_get_pixel_extents (layout, &extents, NULL);
+
+    /* Alignement horizontal dans le layout */
+    pango_layout_set_alignment (layout, 
+        halign == 0 ? PANGO_ALIGN_LEFT : 
+        halign == 1 ? PANGO_ALIGN_CENTER : 
+                      PANGO_ALIGN_RIGHT);
+
+    /* Debug : affichage de la bounding box */
+    if (FALSE) {
+        gc_set_rgb_fg (gc, 0x888888);
+        gdk_draw_rectangle (widget->window, gc, FALSE, 
+            x - extents.width  * halign/2, 
+            y - extents.height * valign/2, 
+            extents.width, extents.height);
+        gc_set_rgb_fg (gc, 0xFF0000);
+        gdk_draw_line (widget->window, gc, x-20, y, x+20, y);
+        gdk_draw_line (widget->window, gc, x, y-20, x, y+20);
+        gc_set_rgb_fg (gc, 0x0000FF);
+    }
+
+    /* Affichage du layout */
+    gdk_draw_layout (widget->window, gc, 
+        x - extents.x - extents.width  * halign/2,
+        y - extents.y - extents.height * valign/2,
+        layout);    
+
+    if (layout_priv) {
+        g_object_unref (G_OBJECT (layout));  /* Libère la memoire */
+    }
+}
+

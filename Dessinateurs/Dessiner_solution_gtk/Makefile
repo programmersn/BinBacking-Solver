@@ -1,0 +1,41 @@
+SHELL  = /bin/bash
+MAKE   = make
+CC     = gcc
+CFLAGS = -W -Wall -std=c89 -ansi -pedantic `pkg-config gtk+-2.0 --cflags`
+LIBS   = `pkg-config gtk+-2.0 --libs`
+OBJS   = dessiner_solution.o lecture_solution.o gui.o info.o outils_dessin.o  
+DRAW   = dessiner_solution
+RM     = rm -f
+
+# Uncomment for debugging option :
+DEBUG = 1
+ifdef DEBUG
+	CFLAGS += -ggdb
+endif
+
+# Uncomment for optimization option :
+#OPTIMIZ = 1
+ifdef OPTIMIZ
+	CFLAGS += -O2
+endif
+
+.PHONY : help all clean depend
+
+help :
+	@echo "Options du makefile : help all clean depend"
+
+all : $(DRAW)
+
+.c.o :
+	$(CC) $*.c -c $(CFLAGS)
+
+clean :
+	$(RM) *.o $(DRAW)
+
+depend :
+	makedepend dessiner_solution.c lecture_solution.c gui.c info.c outils_dessin.c
+
+$(DRAW) : $(OBJS)
+	$(CC) $(OBJS) -o $(DRAW) $(LIBS)
+
+

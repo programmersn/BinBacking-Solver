@@ -1,0 +1,43 @@
+/* util.h - 24/02/2012 */
+
+#ifndef H_OUTILS_DESSIN_H
+#define H_OUTILS_DESSIN_H
+
+#include <gtk/gtk.h>
+
+#define U __attribute__ ((unused))
+#define HOMOGENEOUS TRUE
+#define EXPAND      TRUE
+#define FILL        TRUE
+
+#define ON_SIGNAL(w,n,c,d) \
+    (g_signal_connect(G_OBJECT(w), (n), G_CALLBACK(c), (d) ))
+
+/* Font */
+
+typedef enum { 
+    FONT_AA = 183200,
+    /* Top Left, Top Center, Top Right */
+    FONT_TL,  FONT_TC,  FONT_TR,
+    /* Middle Left, Middle Center, Middle Right */     
+    FONT_ML,  FONT_MC,  FONT_MR,
+    /* Bottom Left, Bottom Center, Bottom Right */
+    FONT_BL,  FONT_BC,  FONT_BR,
+    FONT_BB
+} Font_align;
+
+void font_set_size (PangoLayout *layout, int size);
+void font_set_name (PangoLayout *layout, char const *desc);
+void font_draw_text (GtkWidget *widget, GdkGC *gc, PangoLayout *layout,
+										 Font_align align, int x, int y, const char *format, ...);
+
+/* Colors */
+void set_color (GdkGC *gc, gint r, gint g, gint b);
+void color_set_rgb (GdkColor *color, guint rgb);
+void gc_set_rgb_fg (GdkGC *gc, guint rgb);
+GdkColor *static_color_from_rgb (guint rgb);
+guint rgb_from_color (GdkColor *color);
+
+
+#endif /** H_OUTILS_DESSIN_H */
+
